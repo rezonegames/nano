@@ -41,6 +41,8 @@ func (g *GateService) Login(s *session.Session, msg *protocol.LoginRequest) erro
 		return errors.Trace(err)
 	}
 
+	log.Printf("GateService.Login user: %+v", u)
+
 	s.Bind(u.UId)
 	s.Set("name", u.Name)
 	g.users[u.UId] = u
@@ -56,7 +58,7 @@ func (g *GateService) Login(s *session.Session, msg *protocol.LoginRequest) erro
 	s.RPC("MasterService.NewUser", n)
 	s.RPC("RoomService.NewUser", n)
 
-	return s.Response(&protocol.LoginResponse{UId: u.UId, Diamond: u.Diamond, Name: u.Name})
+	return s.Response(&protocol.LoginResponse{UId: u.UId, Diamond: u.Diamond, Name: u.Name, Pic: u.Pic})
 }
 
 func (g *GateService) userDisconnected(s *session.Session)  {

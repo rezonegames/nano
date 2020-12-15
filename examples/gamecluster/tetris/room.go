@@ -209,7 +209,7 @@ func (rs *RoomService) AfterInit() {
 	ticker := time.NewTicker(10*time.Second)
 	go func() {
 		for range ticker.C {
-			log.Printf("room table count: %d", rs.room.group.Count())
+			log.Printf("room table count: %d user count: %d", len(rs.room.tables), rs.room.group.Count())
 		}
 	}()
 	session.Lifetime.OnClosed(rs.userDisconnected)
@@ -236,7 +236,14 @@ func (rs *RoomService) Join(s *session.Session, msg *protocol.JoinRoomRequest) e
 }
 
 func (rs *RoomService) Leave(s *session.Session, msg *protocol.LeaveRoomRequest) error {
-	return rs.room.leave(s)
+	if err := rs.room.leave(s); err != nil {
+		return errors.Trace(err)
+	}
+	return s.Response(&protocol.LeaveRoomResponse{
+		Code:    0,
+		UId:     s.UID(),
+		Content: fmt.Sprintf("player %d leave room:", s.UID()),
+	})
 }
 
 func (rs *RoomService) userDisconnected(s *session.Session)  {

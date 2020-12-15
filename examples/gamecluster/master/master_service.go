@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"math"
 	"net/http"
+	"github.com/rs/cors"
 )
 
 type MasterService struct {
@@ -32,8 +33,8 @@ func (m *MasterService) AfterInit()  {
 }
 
 func (m *MasterService) startup()  {
-	//m.gates["127.0.0.1:34560"] = 0
-	http.HandleFunc("/addr", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/addr", func(w http.ResponseWriter, r *http.Request) {
 		gl, ok :=  runtime.CurrentNode.Handler().RemoteMember("GateService")
 		if !ok {
 			fmt.Fprintf(w, "")
@@ -49,15 +50,17 @@ func (m *MasterService) startup()  {
 			}
 		}
 		log.Printf("advise gate addr: %s", addr)
-		fmt.Fprintf(w, addr)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(fmt.Sprintf("{\"addr\": \"%s\",\"path\": \"%s\"}", addr, "/nano")))
 	})
-	if err := http.ListenAndServe(":8090", nil); err != nil {
+	handler := cors.Default().Handler(mux)
+	if err := http.ListenAndServe(":8090", handler); err != nil {
 		panic(err)
 	}
 }
 
 func (m *MasterService) NewUser(s *session.Session, msg *protocol.NewUserRequest) error {
-	log.Println("MasterService.NewUser user: %+v", msg)
+	log.Printf("MasterService.NewUser user: %+v", msg)
 	s.Bind(msg.UId)
 	s.Set("name", msg.Name)
 	s.Set("addr", msg.Addr)

@@ -86,18 +86,21 @@ func (mc *MongoClient) FindAndCreateUser(deviceId string, ) (*User, error) {
 		}
 
 		name := fmt.Sprintf("name-%d", c.Count)
+		pic := "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83epW6HbP60p4KO3eaId0N4IoXb5D6uibNA1FC5NPd96UiajSScFGv105juHCEicR9FuNWXH17lg4FURAA/132"
 		diamond := 10
 		if _, err := cu.InsertOne(context.Background(), bson.M{
 			"_id":c.Count,
 			"deviceid":deviceId,
 			"diamond": diamond,
 			"name": name,
+			"pic": pic,
 		}); err != nil {
 			return nil, errors.Trace(err)
 		} else {
 			u.UId = c.Count
 			u.Diamond = diamond
 			u.Name = name
+			u.Pic = pic
 		}
 	}
 	return u, nil

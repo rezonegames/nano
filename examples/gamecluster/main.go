@@ -67,6 +67,11 @@ func main()  {
 					Usage: "Chat service listen address",
 					Value: "127.0.0.1:34568",
 				},
+				cli.IntFlag{
+					Name:  "cap",
+					Usage: "Chat service listen address",
+					Value: 2,
+				},
 			},
 			Action: runTetris,
 		},
@@ -120,6 +125,8 @@ func runGate(args *cli.Context) error {
 		nano.WithCheckOriginFunc(func(_ *http.Request) bool { return true }),
 		//nano.WithDebugMode(),
 		nano.WithSerializer(json.NewSerializer()),
+		nano.WithIsWebsocket(true),
+		nano.WithWSPath("/nano"),
 	)
 	return nil
 }
@@ -133,6 +140,10 @@ func runTetris(args *cli.Context) error {
 	if masterAddr == "" {
 		return errors.Errorf("master address cannot empty")
 	}
+	cap := args.Int("cap")
+	if cap <= 0 {
+		return errors.Errorf("cap <=0")
+	}
 	if err := db.NewMongoClient("mongodb://host.docker.internal:27018,host.docker.internal:27017/Slots5StoreBeta?replicaSet=rs0&readPreference=secondary"); err != nil {
 		return errors.Errorf("mongodb init error err v+%", err)
 	}
@@ -140,11 +151,11 @@ func runTetris(args *cli.Context) error {
 	service := &component.Components{}
 	roomservice := tetris.NewRoomService(
 		tetris.WithCap(100000),
-		tetris.WithTableCap(6),
+		tetris.WithTableCap(cap),
 	)
 	tableservice := tetris.NewTableService(
 		tetris.WithRoom(roomservice.Room()),
-		tetris.WithTableCap(6),
+		tetris.WithTableCap(cap),
 	)
 	service.Register(roomservice)
 	service.Register(tableservice)

@@ -7,7 +7,7 @@ type JoinRoomRequest struct {
 type JoinRoomResponse struct {
 	Code	int    			`json:"code"`
 	//Result string `json:"result"`
-	Tables []TableInfo 	`json:"tableInfo"`
+	Tables []TableInfo 	`json:"tables"`
 }
 
 type LeaveRoomRequest struct {

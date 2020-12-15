@@ -278,6 +278,17 @@ func (r *Round) ready(s *session.Session) error {
 	return  nil
 }
 
+func (r *Round) cancelready(s *session.Session) error {
+	if r.isRunning {
+		return fmt.Errorf("round is running")
+	}
+	u := r.user(s)
+	u.ready = false
+	//broadcast
+	r.table.cancelready(s);
+	return  nil
+}
+
 func (r *Round) over(s *session.Session) error {
 	if !r.isRunning {
 		return fmt.Errorf("round alredy over")
@@ -299,6 +310,10 @@ func (r *Round) run()  {
 		case s:=<-r.chReady:
 			b := true
 			//log.Printf("Round.run ready userid: %d", s.UID())
+
+			blue := []int64{}
+			red := []int64{}
+
 			r.table.ready(s)
 			for k, v := range r.red {
 				if k == s.UID() {
@@ -307,6 +322,7 @@ func (r *Round) run()  {
 				if !v.ready {
 					b = false
 				}
+				red = append(red, k)
 			}
 			for k, v := range r.blue {
 				if k == s.UID() {
@@ -315,11 +331,12 @@ func (r *Round) run()  {
 				if !v.ready {
 					b = false
 				}
+				blue = append(blue, k)
 			}
 			log.Printf("Round.run ready userid: %d b: %v red: %d blue: %d x: %d", s.UID(), b, len(r.red), len(r.blue), r.cap/2)
 			if b && len(r.red) == len(r.blue) && len(r.red) == r.cap/2 {
 				r.isRunning = true
-				r.table.start()
+				r.table.start(red, blue)
 			}
 		case s:=<-r.chOver:
 			b := true
@@ -352,13 +369,18 @@ func (r *Round) run()  {
 	}
 }
 
-func (t *Table) start() {
-	count := 8
+func (t *Table) start(red, blue []int64) {
+	count := 5
 	scheduler.NewCountTimer(1*time.Second, count, func() {
 		count--
 		if count == 0 {
-			t.group.Broadcast("onStart", &protocol.OnStart{})
+			log.Println("round start :)")
+			t.group.Broadcast("onStart", &protocol.OnStart{
+				Blue: blue,
+				Red: red,
+			})
 		} else {
+			log.Printf("..............%d", count)
 			t.group.Broadcast("onCountdown", &protocol.OnCountdown{Countdown: count})
 		}
 	})
@@ -370,6 +392,15 @@ func (t *Table) ready(s *session.Session) {
 		UId:     s.UID(),
 		Name:    s.String("name"),
 		Content: "user ready",
+	}})
+}
+
+func (t *Table) cancelready(s *session.Session) {
+	//log.Printf("Table.ready userid: %d", s.UID())
+	t.group.Broadcast("onCancelReady", &protocol.OnCancelReady{User: protocol.UserInfo{
+		UId:     s.UID(),
+		Name:    s.String("name"),
+		Content: "user cancelready",
 	}})
 }
 
@@ -532,16 +563,19 @@ func (ts *TableService) Join(s *session.Session, msg *protocol.JoinTableRequest)
 	}
 	return s.Response(&protocol.JoinTableResponse{
 		Code:  0,
-		Table: *t.info(),
+		TableInfo: *t.info(),
 	})
 }
 
-func (ts *TableService) Leave(s *session.Session) error {
+func (ts *TableService) Leave(s *session.Session, msg *protocol.TableLeaveRequest) error {
 	t, err := SessionTable(s)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	return t.leave(s)
+	if err := t.leave(s); err != nil {
+		return errors.Trace(err)
+	}
+	return s.Response(&protocol.TableLeaveResponse{})
 }
 
 func (ts *TableService) Ready(s *session.Session, msg *protocol.ReadyRequest) error {
@@ -552,8 +586,20 @@ func (ts *TableService) Ready(s *session.Session, msg *protocol.ReadyRequest) er
 	if err := r.ready(s); err != nil {
 		return errors.Trace(err)
 	}
-	log.Printf("TableService.Ready userid: %d", s.UID())
+	log.Printf("TableService.Ready userid: %d.........", s.UID())
 	return s.Response(&protocol.ReadyResponse{})
+}
+
+func (ts *TableService) CancelReady(s *session.Session, msg *protocol.CancelReadyRequest) error {
+	r, err := SessionRound(s)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if err := r.cancelready(s); err != nil {
+		return errors.Trace(err)
+	}
+	log.Printf("TableService.CancelReady userid: %d.........", s.UID())
+	return s.Response(&protocol.CancelReadyResponse{})
 }
 
 func (ts *TableService) Over(s *session.Session, msg *protocol.OverRequest) error {

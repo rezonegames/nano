@@ -5,6 +5,7 @@ type User struct {
 	Diamond	int 	`json:"diamond"`
 	DeviceId string `json:"deviceid"`
 	Name 	string	`json:"name"`
+	Pic 	string 	`json:"pic"`
 }
 
 type Counter struct {

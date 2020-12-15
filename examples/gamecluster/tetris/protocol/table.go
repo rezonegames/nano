@@ -24,10 +24,20 @@ type JoinTableRequest struct {
 
 type JoinTableResponse struct {
 	Code	int    		`json:"code"`
-	Table TableInfo 	`json:"table"`
+	TableInfo TableInfo 	`json:"table"`
+}
+
+type TableLeaveRequest struct {
+	
+}
+
+type TableLeaveResponse struct {
+
 }
 
 type OnStart struct {
+	Blue []int64	`json:"blue"`
+	Red  []int64	`json:"red"`
 }
 
 type Reward struct {
@@ -47,6 +57,15 @@ type ReadyResponse struct {
 	Code 	int 	`json:"code"`
 }
 
+type CancelReadyRequest struct {
+
+}
+
+type CancelReadyResponse struct {
+	Code 	int 	`json:"code"`
+}
+
+
 type OverRequest struct {
 	
 }
@@ -60,6 +79,10 @@ type OnCountdown struct {
 }
 
 type OnReady struct {
+	User UserInfo	`json:"user"`
+}
+
+type OnCancelReady struct {
 	User UserInfo	`json:"user"`
 }
 

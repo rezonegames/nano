@@ -2,18 +2,17 @@ package tetris
 
 import (
 	"fmt"
+	"github.com/pingcap/errors"
+	log "github.com/sirupsen/logrus"
 	"nano"
 	"nano/component"
 	"nano/examples/gamecluster/tetris/protocol"
 	"nano/scheduler"
 	"nano/session"
-	"github.com/pingcap/errors"
-	log "github.com/sirupsen/logrus"
 	"sync"
 	"sync/atomic"
 	"time"
 )
-
 
 func SessionTable(s *session.Session) (*Table, error) {
 	if !s.HasKey(TableKey) {
@@ -29,7 +28,6 @@ func SessionRound(s *session.Session) (*Round, error) {
 	return s.Value(RoundKey).(*Round), nil
 }
 
-
 const (
 	TableKey = "table"
 	RoundKey = "round"
@@ -42,53 +40,51 @@ var (
 
 type (
 	User struct {
-		uId		int64
-		ready	bool
-		over 	bool
-		pos 	int
-		team 	int
-		isLeave bool
-		entertime	int64
+		uId       int64
+		ready     bool
+		over      bool
+		pos       int
+		team      int
+		isLeave   bool
+		entertime int64
 	}
 
 	Round struct {
-		roundId			int32
-		rank 	[]*User
+		roundId int32
+		rank    []*User
 		//0,1,2 red team
 		//3,4,5 blue team
-		red 	map[int64]*User
-		blue 	map[int64]*User
+		red  map[int64]*User
+		blue map[int64]*User
 
 		pending map[int64]*session.Session
 
-		cap		int
+		cap int
 
-		chReady	chan *session.Session
-		chOver 	chan *session.Session
+		chReady chan *session.Session
+		chOver  chan *session.Session
 
+		status int
 
-		status 	int
+		table *Table
 
-		table 	*Table
+		isRunning bool
 
-		isRunning 	bool
-
-		owner 	int64
+		owner int64
 	}
 
 	Table struct {
-		group 	*nano.Group
-		cap 	int
-		tableId	int32
-		name 	string
-		desc	string
-		chDie	chan struct{}
-		round	*Round
-		room	*Room
-		lock 	sync.RWMutex
+		group   *nano.Group
+		cap     int
+		tableId int32
+		name    string
+		desc    string
+		chDie   chan struct{}
+		round   *Round
+		room    *Room
+		lock    sync.RWMutex
 	}
 )
-
 
 func newTable(opts ...Option) *Table {
 	opt := options{}
@@ -103,8 +99,8 @@ func newTable(opts ...Option) *Table {
 		red:     make(map[int64]*User),
 		blue:    make(map[int64]*User),
 		chReady: make(chan *session.Session),
-		chOver: make(chan *session.Session),
-		cap:	 opt.cap,
+		chOver:  make(chan *session.Session),
+		cap:     opt.cap,
 	}
 	t := &Table{
 		group:   nano.NewGroup(fmt.Sprintf("table-%d", nextTableId)),
@@ -114,7 +110,7 @@ func newTable(opts ...Option) *Table {
 		desc:    opt.desc,
 		chDie:   nil,
 		round:   r,
-		room: opt.room,
+		room:    opt.room,
 	}
 	r.table = t
 	go r.run()
@@ -124,7 +120,7 @@ func newTable(opts ...Option) *Table {
 func (r *Round) reset() {
 	atomic.AddInt32(&nextRoundId, 1)
 	r.roundId = nextRoundId
-	r.rank 	= nil
+	r.rank = nil
 
 	for k, v := range r.red {
 		v.ready = false
@@ -150,7 +146,7 @@ func (r *Round) reset() {
 	log.Printf("Round.reset r: %+v", r)
 }
 
-func(r *Round) change2pos(s *session.Session, pos int) error {
+func (r *Round) change2pos(s *session.Session, pos int) error {
 	if r.isRunning {
 		r.pending[s.UID()] = s
 		return nil
@@ -190,20 +186,20 @@ func (r *Round) add2recommend(s *session.Session, bForce bool) error {
 	bc := len(r.blue)
 	if rc > bc {
 		r.blue[s.UID()] = &User{
-			uId:   s.UID(),
-			ready: false,
-			over:  false,
-			pos:   bc+1,
-			team:  0,
+			uId:       s.UID(),
+			ready:     false,
+			over:      false,
+			pos:       bc + 1,
+			team:      0,
 			entertime: time.Now().UnixNano(),
 		}
 	} else {
 		r.red[s.UID()] = &User{
-			uId:   s.UID(),
-			ready: false,
-			over:  false,
-			pos:   rc+1,
-			team:  1,
+			uId:       s.UID(),
+			ready:     false,
+			over:      false,
+			pos:       rc + 1,
+			team:      1,
 			entertime: time.Now().UnixNano(),
 		}
 	}
@@ -253,7 +249,7 @@ func (r *Round) leave(s *session.Session) error {
 	u := r.user(s)
 	if r.isRunning {
 		u.isLeave = true
-		r.chOver<-s
+		r.chOver <- s
 	} else {
 		delete(r.blue, s.UID())
 		delete(r.red, s.UID())
@@ -272,10 +268,10 @@ func (r *Round) ready(s *session.Session) error {
 		return fmt.Errorf("round is running")
 	}
 	//log.Printf("Round.ready before userid: %d", s.UID())
-	r.chReady<-s
+	r.chReady <- s
 	//log.Printf("Round.ready after userid: %d", s.UID())
 
-	return  nil
+	return nil
 }
 
 func (r *Round) cancelready(s *session.Session) error {
@@ -285,15 +281,15 @@ func (r *Round) cancelready(s *session.Session) error {
 	u := r.user(s)
 	u.ready = false
 	//broadcast
-	r.table.cancelready(s);
-	return  nil
+	r.table.cancelready(s)
+	return nil
 }
 
 func (r *Round) over(s *session.Session) error {
 	if !r.isRunning {
 		return fmt.Errorf("round alredy over")
 	}
-	r.chOver<-s
+	r.chOver <- s
 	return nil
 }
 
@@ -304,10 +300,10 @@ func (r *Round) kick(s *session.Session) error {
 	return r.leave(s)
 }
 
-func (r *Round) run()  {
-	for{
+func (r *Round) run() {
+	for {
 		select {
-		case s:=<-r.chReady:
+		case s := <-r.chReady:
 			b := true
 			//log.Printf("Round.run ready userid: %d", s.UID())
 
@@ -338,7 +334,7 @@ func (r *Round) run()  {
 				r.isRunning = true
 				r.table.start(red, blue)
 			}
-		case s:=<-r.chOver:
+		case s := <-r.chOver:
 			b := true
 			//log.Printf("Round.run over userid: %d", s.UID())
 			r.table.over(s)
@@ -377,7 +373,7 @@ func (t *Table) start(red, blue []int64) {
 			log.Println("round start :)")
 			t.group.Broadcast("onStart", &protocol.OnStart{
 				Blue: blue,
-				Red: red,
+				Red:  red,
 			})
 		} else {
 			log.Printf("..............%d", count)
@@ -428,7 +424,7 @@ func (t *Table) stopandsettle(rank []*User) {
 				})
 				rw := protocol.Reward{
 					Items: is,
-					UId:  r.uId,
+					UId:   r.uId,
 				}
 				rl = append(rl, rw)
 			}
@@ -497,10 +493,10 @@ func (t *Table) update(msg []byte) error {
 
 func (t *Table) info() *protocol.TableInfo {
 	return &protocol.TableInfo{
-		TableId: t.tableId,
-		Name: t.name,
-		Desc: t.desc,
-		Owner: 1000,
+		TableId:   t.tableId,
+		Name:      t.name,
+		Desc:      t.desc,
+		Owner:     1000,
 		OwnerName: "name",
 	}
 }
@@ -509,7 +505,7 @@ func (t *Table) info() *protocol.TableInfo {
 type TableService struct {
 	component.Base
 	room *Room
-	cap int
+	cap  int
 }
 
 func NewTableService(opts ...Option) *TableService {
@@ -519,12 +515,12 @@ func NewTableService(opts ...Option) *TableService {
 	}
 	return &TableService{
 		room: opt.room,
-		cap: opt.tablecap,
+		cap:  opt.tablecap,
 	}
 }
 
-func (t *TableService) AfterInit()  {
-	ticker := time.NewTicker(30*time.Second)
+func (t *TableService) AfterInit() {
+	ticker := time.NewTicker(30 * time.Second)
 
 	go func() {
 		for range ticker.C {
@@ -562,7 +558,7 @@ func (ts *TableService) Join(s *session.Session, msg *protocol.JoinTableRequest)
 		return errors.Trace(err)
 	}
 	return s.Response(&protocol.JoinTableResponse{
-		Code:  0,
+		Code:      0,
 		TableInfo: *t.info(),
 	})
 }
@@ -618,4 +614,3 @@ func (ts *TableService) Update(s *session.Session, msg []byte) error {
 	}
 	return t.update(msg)
 }
-

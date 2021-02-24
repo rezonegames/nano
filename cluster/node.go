@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"google.golang.org/grpc"
 	"nano/cluster/clusterpb"
 	"nano/component"
 	"nano/internal/env"
@@ -19,7 +20,6 @@ import (
 	"nano/pipeline"
 	"nano/scheduler"
 	"nano/session"
-	"google.golang.org/grpc"
 )
 
 // Options contains some configurations for current node
@@ -132,7 +132,7 @@ func (n *Node) initNode() error {
 			memberInfo: &clusterpb.MemberInfo{
 				Label:       n.Label,
 				ServiceAddr: n.ServiceAddr,
-				ClientAddr: n.ClientAddr,
+				ClientAddr:  n.ClientAddr,
 				Services:    n.handler.LocalService(),
 			},
 		}
@@ -148,7 +148,7 @@ func (n *Node) initNode() error {
 			MemberInfo: &clusterpb.MemberInfo{
 				Label:       n.Label,
 				ServiceAddr: n.ServiceAddr,
-				ClientAddr: n.ClientAddr,
+				ClientAddr:  n.ClientAddr,
 				Services:    n.handler.LocalService(),
 			},
 		}

@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
+	. "github.com/pingcap/check"
 	"nano/benchmark/io"
 	"nano/benchmark/testdata"
 	"nano/cluster"
 	"nano/component"
 	"nano/scheduler"
 	"nano/session"
-	. "github.com/pingcap/check"
 )
 
 type nodeSuite struct{}

@@ -9,20 +9,17 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	UId		int64 	`json:"uId"`
-	Diamond	int		`json:"diamond"`
-	Name 	string 	`json:"name"`
-	Pic 	string 	`json:"pic"`
+	UId     int64  `json:"uId"`
+	Diamond int    `json:"diamond"`
+	Name    string `json:"name"`
+	Pic     string `json:"pic"`
 }
 
 type BindRequest struct {
-
 }
 
 type Ping struct {
-	
 }
 
 type Pong struct {
-	
 }

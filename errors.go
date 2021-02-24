@@ -1,5 +1,3 @@
-
-
 package nano
 
 import "errors"

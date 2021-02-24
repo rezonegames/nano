@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	MONGO_DB_CONN_POOL	= 128
+	MONGO_DB_CONN_POOL = 128
 )
 
 var (
@@ -20,9 +20,9 @@ var (
 
 type (
 	MongoClient struct {
-		client 	*mongo.Client
-		colls  	map[string]*mongo.Collection
-		uri		string
+		client *mongo.Client
+		colls  map[string]*mongo.Collection
+		uri    string
 	}
 )
 
@@ -66,14 +66,14 @@ func (mc *MongoClient) findAndUpdate(collname string, filter interface{}, update
 	return coll.FindOneAndUpdate(context.Background(), filter, update, opts...), nil
 }
 
-func (mc *MongoClient) FindAndCreateUser(deviceId string, ) (*User, error) {
+func (mc *MongoClient) FindAndCreateUser(deviceId string) (*User, error) {
 	cu := mc.collection("users")
 	if cu == nil {
 		return nil, errors.Errorf("no users coll")
 	}
 
 	u := &User{}
-	err := cu.FindOne(context.Background(), bson.M{"deviceid":deviceId}).Decode(u)
+	err := cu.FindOne(context.Background(), bson.M{"deviceid": deviceId}).Decode(u)
 	if err != nil {
 		cc := mc.collection("counters")
 		if cc == nil {
@@ -81,7 +81,7 @@ func (mc *MongoClient) FindAndCreateUser(deviceId string, ) (*User, error) {
 		}
 		c := &Counter{}
 		opts := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
-		if err := cc.FindOneAndUpdate(context.Background(), bson.M{"type":"users"}, bson.M{"$inc":bson.M{"count":1}}, opts).Decode(c); err != nil {
+		if err := cc.FindOneAndUpdate(context.Background(), bson.M{"type": "users"}, bson.M{"$inc": bson.M{"count": 1}}, opts).Decode(c); err != nil {
 			return nil, errors.Errorf("counter error")
 		}
 
@@ -89,11 +89,11 @@ func (mc *MongoClient) FindAndCreateUser(deviceId string, ) (*User, error) {
 		pic := "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83epW6HbP60p4KO3eaId0N4IoXb5D6uibNA1FC5NPd96UiajSScFGv105juHCEicR9FuNWXH17lg4FURAA/132"
 		diamond := 10
 		if _, err := cu.InsertOne(context.Background(), bson.M{
-			"_id":c.Count,
-			"deviceid":deviceId,
-			"diamond": diamond,
-			"name": name,
-			"pic": pic,
+			"_id":      c.Count,
+			"deviceid": deviceId,
+			"diamond":  diamond,
+			"name":     name,
+			"pic":      pic,
 		}); err != nil {
 			return nil, errors.Trace(err)
 		} else {

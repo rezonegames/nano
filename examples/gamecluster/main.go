@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/pingcap/errors"
+	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 	"nano"
 	"nano/component"
 	"nano/examples/gamecluster/db"
@@ -8,14 +11,11 @@ import (
 	"nano/examples/gamecluster/master"
 	"nano/examples/gamecluster/tetris"
 	"nano/serialize/json"
-	"github.com/pingcap/errors"
-	log "github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 	"net/http"
 	"os"
 )
 
-func main()  {
+func main() {
 	app := cli.NewApp()
 	app.Name = "tetris"
 	app.Author = "rezonegames"

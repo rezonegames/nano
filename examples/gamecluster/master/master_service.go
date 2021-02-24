@@ -2,22 +2,22 @@ package master
 
 import (
 	"fmt"
+	"github.com/rs/cors"
+	log "github.com/sirupsen/logrus"
+	"math"
 	"nano/component"
 	"nano/examples/gamecluster/protocol"
 	"nano/internal/runtime"
 	"nano/session"
-	log "github.com/sirupsen/logrus"
-	"math"
 	"net/http"
-	"github.com/rs/cors"
 )
 
 type MasterService struct {
 	component.Base
-	gates	map[string]int
+	gates map[string]int
 }
 
-func NewMasterService() *MasterService{
+func NewMasterService() *MasterService {
 	return &MasterService{
 		gates: map[string]int{},
 	}
@@ -27,22 +27,22 @@ func (m *MasterService) Init() {
 	go m.startup()
 }
 
-func (m *MasterService) AfterInit()  {
+func (m *MasterService) AfterInit() {
 	session.Lifetime.OnClosed(func(s *session.Session) {
 	})
 }
 
-func (m *MasterService) startup()  {
+func (m *MasterService) startup() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/addr", func(w http.ResponseWriter, r *http.Request) {
-		gl, ok :=  runtime.CurrentNode.Handler().RemoteMember("GateService")
+		gl, ok := runtime.CurrentNode.Handler().RemoteMember("GateService")
 		if !ok {
 			fmt.Fprintf(w, "")
 		}
 		num := math.MaxInt64
-		addr:= ""
+		addr := ""
 		for _, mi := range gl {
-		//	[]*clusterpb.MemberInfo
+			//	[]*clusterpb.MemberInfo
 			if n, _ := m.gates[mi.ClientAddr]; n < num {
 				log.Printf("gate addr: %s n: %d", mi.ClientAddr, n)
 				addr = mi.ClientAddr
@@ -68,7 +68,7 @@ func (m *MasterService) NewUser(s *session.Session, msg *protocol.NewUserRequest
 	return nil
 }
 
-func (m *MasterService) userDisconnected(s *session.Session)  {
+func (m *MasterService) userDisconnected(s *session.Session) {
 	log.Println("User session disconnected", s.UID())
 	addr := s.String("addr")
 	m.gates[addr]--

@@ -3,35 +3,34 @@ package tetris
 import (
 	"container/list"
 	"fmt"
+	"github.com/pingcap/errors"
+	log "github.com/sirupsen/logrus"
 	"nano"
 	"nano/component"
 	protocol2 "nano/examples/gamecluster/protocol"
 	"nano/examples/gamecluster/tetris/protocol"
 	"nano/session"
-	"github.com/pingcap/errors"
-	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
 )
 
 type (
 	Room struct {
-		group 	*nano.Group
-		tables 	map[int32]*Table
-		lock 	sync.RWMutex
-		cap		int
+		group  *nano.Group
+		tables map[int32]*Table
+		lock   sync.RWMutex
+		cap    int
 		//quickstart
-		ql 		*list.List
+		ql *list.List
 
 		tablecap int
 		//filter 		nano.SessionFilter
 	}
-
 )
 
-func (r *Room) run()  {
+func (r *Room) run() {
 	// quick start
-	ticker := time.NewTicker(2*time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	go func() {
 		for range ticker.C {
 			r.lock.Lock()
@@ -43,7 +42,7 @@ func (r *Room) run()  {
 
 			if r.ql.Len() != 0 {
 				for _, v := range r.tables {
-					if v.round.isRunning{
+					if v.round.isRunning {
 						continue
 					}
 					if r.ql.Len() <= 0 {
@@ -54,7 +53,7 @@ func (r *Room) run()  {
 
 					if lack == k {
 						log.Printf("table state user count:%d round: %+v", v.group.Count(), v.round)
-						for i :=0; i<lack; i++ {
+						for i := 0; i < lack; i++ {
 							e := r.ql.Front()
 							if e == nil {
 								break
@@ -86,7 +85,7 @@ func (r *Room) getTable(tableId int32) (*Table, error) {
 	return nil, fmt.Errorf("no table %d", tableId)
 }
 
-func (r *Room) setTable(tableId int32, table *Table)  {
+func (r *Room) setTable(tableId int32, table *Table) {
 	r.tables[tableId] = table
 	log.Printf("Room.setTable: tableid %d", table.tableId)
 }
@@ -172,7 +171,7 @@ func (r *Room) info() *protocol.JoinRoomResponse {
 		tl = append(tl, *v.info())
 	}
 	return &protocol.JoinRoomResponse{
-		Tables:tl,
+		Tables: tl,
 	}
 }
 
@@ -189,10 +188,10 @@ func NewRoomService(opts ...Option) *RoomService {
 		option(&opt)
 	}
 	r := &Room{
-		tables: map[int32]*Table{},
-		group: nano.NewGroup("room"),
-		ql: list.New(),
-		cap: opt.cap,
+		tables:   map[int32]*Table{},
+		group:    nano.NewGroup("room"),
+		ql:       list.New(),
+		cap:      opt.cap,
 		tablecap: opt.tablecap,
 	}
 	go r.run()
@@ -206,7 +205,7 @@ func (rs *RoomService) Room() *Room {
 }
 
 func (rs *RoomService) AfterInit() {
-	ticker := time.NewTicker(10*time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	go func() {
 		for range ticker.C {
 			log.Printf("room table count: %d user count: %d", len(rs.room.tables), rs.room.group.Count())
@@ -246,7 +245,7 @@ func (rs *RoomService) Leave(s *session.Session, msg *protocol.LeaveRoomRequest)
 	})
 }
 
-func (rs *RoomService) userDisconnected(s *session.Session)  {
+func (rs *RoomService) userDisconnected(s *session.Session) {
 	rs.room.leave(s)
 }
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"google.golang.org/grpc"
 	"nano/cluster"
 	"nano/component"
 	"nano/internal/env"
@@ -11,7 +12,6 @@ import (
 	"nano/internal/message"
 	"nano/pipeline"
 	"nano/serialize"
-	"google.golang.org/grpc"
 )
 
 type Option func(*cluster.Options)

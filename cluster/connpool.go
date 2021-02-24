@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"nano/internal/env"
 	"google.golang.org/grpc"
+	"nano/internal/env"
 )
 
 type connPool struct {

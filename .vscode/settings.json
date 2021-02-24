@@ -1,0 +1,4 @@
+{
+    "go.formatTool": "goreturns",
+    "go.inferGopath": false
+}

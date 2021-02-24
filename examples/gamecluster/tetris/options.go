@@ -4,12 +4,12 @@ import "nano"
 
 type (
 	options struct {
-		name	string
-		desc	string
-		cap		int
-		tablecap	int
-		room 	*Room
-		filter 	nano.SessionFilter
+		name     string
+		desc     string
+		cap      int
+		tablecap int
+		room     *Room
+		filter   nano.SessionFilter
 	}
 
 	// Option used to customize handler

@@ -1,36 +1,36 @@
 package protocol
 
 type JoinRoomRequest struct {
-	Offset 	int		`json:"offset"`
+	Offset int `json:"offset"`
 }
 
 type JoinRoomResponse struct {
-	Code	int    			`json:"code"`
+	Code int `json:"code"`
 	//Result string `json:"result"`
-	Tables []TableInfo 	`json:"tables"`
+	Tables []TableInfo `json:"tables"`
 }
 
 type LeaveRoomRequest struct {
 }
 
 type LeaveRoomResponse struct {
-	Code	int    	`json:"code"`
-	UId 	int64 	`json:"uId"`
-	Content string	`json:"content"`
+	Code    int    `json:"code"`
+	UId     int64  `json:"uId"`
+	Content string `json:"content"`
 }
 
 type QuickStartRequest struct {
 }
 
 type QuickStartResponse struct {
-	Code	int    			`json:"code"`
+	Code int `json:"code"`
 }
 
 type CancelQuickStartRequest struct {
 }
 
 type CancelQuickStartResponse struct {
-	Code	int    			`json:"code"`
+	Code int `json:"code"`
 }
 
 type OnCancelQuickStart struct {

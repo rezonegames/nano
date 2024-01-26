@@ -1,3 +1,23 @@
+// Copyright (c) nano Authors. All Rights Reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package cluster
 
 import (
@@ -11,29 +31,31 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/lonng/nano/cluster/clusterpb"
+	"github.com/lonng/nano/component"
+	"github.com/lonng/nano/internal/env"
+	"github.com/lonng/nano/internal/log"
+	"github.com/lonng/nano/internal/message"
+	"github.com/lonng/nano/pipeline"
+	"github.com/lonng/nano/scheduler"
+	"github.com/lonng/nano/session"
 	"google.golang.org/grpc"
-	"nano/cluster/clusterpb"
-	"nano/component"
-	"nano/internal/env"
-	"nano/internal/log"
-	"nano/internal/message"
-	"nano/pipeline"
-	"nano/scheduler"
-	"nano/session"
 )
 
 // Options contains some configurations for current node
 type Options struct {
-	Pipeline       pipeline.Pipeline
-	IsMaster       bool
-	AdvertiseAddr  string
-	RetryInterval  time.Duration
-	ClientAddr     string
-	Components     *component.Components
-	Label          string
-	IsWebsocket    bool
-	TSLCertificate string
-	TSLKey         string
+	Pipeline           pipeline.Pipeline
+	IsMaster           bool
+	AdvertiseAddr      string
+	RetryInterval      time.Duration
+	ClientAddr         string
+	Components         *component.Components
+	Label              string
+	IsWebsocket        bool
+	TSLCertificate     string
+	TSLKey             string
+	UnregisterCallback func(Member)
+	RemoteServiceRoute CustomerRemoteServiceRoute
 }
 
 // Node represents a node in nano cluster, which will contains a group of services.
@@ -50,6 +72,9 @@ type Node struct {
 
 	mu       sync.RWMutex
 	sessions map[int64]*session.Session
+
+	once          sync.Once
+	keepaliveExit chan struct{}
 }
 
 func (n *Node) Startup() error {
@@ -132,7 +157,6 @@ func (n *Node) initNode() error {
 			memberInfo: &clusterpb.MemberInfo{
 				Label:       n.Label,
 				ServiceAddr: n.ServiceAddr,
-				ClientAddr:  n.ClientAddr,
 				Services:    n.handler.LocalService(),
 			},
 		}
@@ -148,7 +172,6 @@ func (n *Node) initNode() error {
 			MemberInfo: &clusterpb.MemberInfo{
 				Label:       n.Label,
 				ServiceAddr: n.ServiceAddr,
-				ClientAddr:  n.ClientAddr,
 				Services:    n.handler.LocalService(),
 			},
 		}
@@ -162,9 +185,8 @@ func (n *Node) initNode() error {
 			log.Println("Register current node to cluster failed", err, "and will retry in", n.RetryInterval.String())
 			time.Sleep(n.RetryInterval)
 		}
-
+		n.once.Do(n.keepalive)
 	}
-
 	return nil
 }
 
@@ -182,7 +204,10 @@ func (n *Node) Shutdown() {
 	for i := length - 1; i >= 0; i-- {
 		components[i].Comp.Shutdown()
 	}
-
+	// close sendHeartbeat
+	if n.keepaliveExit != nil {
+		close(n.keepaliveExit)
+	}
 	if !n.IsMaster && n.AdvertiseAddr != "" {
 		pool, err := n.rpcClient.getConnPool(n.AdvertiseAddr)
 		if err != nil {
@@ -366,6 +391,7 @@ func (n *Node) NewMember(_ context.Context, req *clusterpb.NewMemberRequest) (*c
 }
 
 func (n *Node) DelMember(_ context.Context, req *clusterpb.DelMemberRequest) (*clusterpb.DelMemberResponse, error) {
+	log.Println("DelMember member", req.String())
 	n.handler.delMember(req.ServiceAddr)
 	n.cluster.delMember(req.ServiceAddr)
 	return &clusterpb.DelMemberResponse{}, nil
@@ -393,4 +419,44 @@ func (n *Node) CloseSession(_ context.Context, req *clusterpb.CloseSessionReques
 		s.Close()
 	}
 	return &clusterpb.CloseSessionResponse{}, nil
+}
+
+// ticker send heartbeat register info to master
+func (n *Node) keepalive() {
+	if n.keepaliveExit == nil {
+		n.keepaliveExit = make(chan struct{})
+	}
+	if n.AdvertiseAddr == "" || n.IsMaster {
+		return
+	}
+	heartbeat := func() {
+		pool, err := n.rpcClient.getConnPool(n.AdvertiseAddr)
+		if err != nil {
+			log.Println("rpcClient master conn", err)
+			return
+		}
+		masterCli := clusterpb.NewMasterClient(pool.Get())
+		if _, err := masterCli.Heartbeat(context.Background(), &clusterpb.HeartbeatRequest{
+			MemberInfo: &clusterpb.MemberInfo{
+				Label:       n.Label,
+				ServiceAddr: n.ServiceAddr,
+				Services:    n.handler.LocalService(),
+			},
+		}); err != nil {
+			log.Println("Member send heartbeat error", err)
+		}
+	}
+	go func() {
+		ticker := time.NewTicker(env.Heartbeat)
+		for {
+			select {
+			case <-ticker.C:
+				heartbeat()
+			case <-n.keepaliveExit:
+				log.Println("Exit member node heartbeat ")
+				ticker.Stop()
+				return
+			}
+		}
+	}()
 }

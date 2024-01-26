@@ -4,10 +4,10 @@ import (
 	"context"
 	"net"
 
-	"nano/cluster/clusterpb"
-	"nano/internal/message"
-	"nano/mock"
-	"nano/session"
+	"github.com/lonng/nano/cluster/clusterpb"
+	"github.com/lonng/nano/internal/message"
+	"github.com/lonng/nano/mock"
+	"github.com/lonng/nano/session"
 )
 
 type acceptor struct {

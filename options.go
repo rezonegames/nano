@@ -4,14 +4,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/lonng/nano/cluster"
+	"github.com/lonng/nano/component"
+	"github.com/lonng/nano/internal/env"
+	"github.com/lonng/nano/internal/log"
+	"github.com/lonng/nano/internal/message"
+	"github.com/lonng/nano/pipeline"
+	"github.com/lonng/nano/serialize"
+	"github.com/lonng/nano/service"
 	"google.golang.org/grpc"
-	"nano/cluster"
-	"nano/component"
-	"nano/internal/env"
-	"nano/internal/log"
-	"nano/internal/message"
-	"nano/pipeline"
-	"nano/serialize"
 )
 
 type Option func(*cluster.Options)
@@ -19,6 +20,13 @@ type Option func(*cluster.Options)
 func WithPipeline(pipeline pipeline.Pipeline) Option {
 	return func(opt *cluster.Options) {
 		opt.Pipeline = pipeline
+	}
+}
+
+// WithCustomerRemoteServiceRoute register remote service route
+func WithCustomerRemoteServiceRoute(route cluster.CustomerRemoteServiceRoute) Option {
+	return func(opt *cluster.Options) {
+		opt.RemoteServiceRoute = route
 	}
 }
 
@@ -143,5 +151,26 @@ func WithTSLConfig(certificate, key string) Option {
 func WithLogger(l log.Logger) Option {
 	return func(opt *cluster.Options) {
 		log.SetLogger(l)
+	}
+}
+
+// WithHandshakeValidator sets the function that Verify `handshake` data
+func WithHandshakeValidator(fn func([]byte) error) Option {
+	return func(opt *cluster.Options) {
+		env.HandshakeValidator = fn
+	}
+}
+
+// WithNodeId set nodeId use snowflake nodeId generate sessionId, default: pid
+func WithNodeId(nodeId uint64) Option {
+	return func(opt *cluster.Options) {
+		service.ResetNodeId(nodeId)
+	}
+}
+
+// WithUnregisterCallback master unregister member event call fn
+func WithUnregisterCallback(fn func(member cluster.Member)) Option {
+	return func(opt *cluster.Options) {
+		opt.UnregisterCallback = fn
 	}
 }

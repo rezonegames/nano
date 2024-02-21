@@ -58,6 +58,18 @@ func NewGroup(n string) *Group {
 	}
 }
 
+// FindMember Find a member with customer filter
+func (c *Group) FindMember(filter func(ses *session.Session) bool) (*session.Session, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	for _, s := range c.sessions {
+		if filter(s) {
+			return s, nil
+		}
+	}
+	return nil, ErrMemberNotFound
+}
+
 // Member returns specified UID's session
 func (c *Group) Member(uid int64) (*session.Session, error) {
 	c.mu.RLock()
@@ -162,10 +174,10 @@ func (c *Group) Add(session *session.Session) error {
 	defer c.mu.Unlock()
 
 	id := session.ID()
-	_, ok := c.sessions[session.ID()]
-	if ok {
-		return ErrSessionDuplication
-	}
+	//_, ok := c.sessions[session.ID()]
+	//if ok {
+	//	return ErrSessionDuplication
+	//}
 
 	c.sessions[id] = session
 	return nil

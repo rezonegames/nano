@@ -71,7 +71,7 @@ func (c *Group) FindMember(filter func(ses *session.Session) bool) (*session.Ses
 }
 
 // Member returns specified UID's session
-func (c *Group) Member(uid int64) (*session.Session, error) {
+func (c *Group) Member(uid string) (*session.Session, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -85,11 +85,11 @@ func (c *Group) Member(uid int64) (*session.Session, error) {
 }
 
 // Members returns all member's UID in current group
-func (c *Group) Members() []int64 {
+func (c *Group) Members() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	var members []int64
+	var members []string
 	for _, s := range c.sessions {
 		members = append(members, s.UID())
 	}
@@ -155,7 +155,7 @@ func (c *Group) Broadcast(route string, v interface{}) error {
 }
 
 // Contains check whether a UID is contained in current group or not
-func (c *Group) Contains(uid int64) bool {
+func (c *Group) Contains(uid string) bool {
 	_, err := c.Member(uid)
 	return err == nil
 }

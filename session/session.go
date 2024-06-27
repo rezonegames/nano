@@ -24,7 +24,6 @@ import (
 	"errors"
 	"net"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/lonng/nano/service"
@@ -53,7 +52,7 @@ var (
 type Session struct {
 	sync.RWMutex                        // protect data
 	id           int64                  // session global unique id
-	uid          int64                  // binding user id
+	uid          string                 // binding user id
 	lastTime     int64                  // last heartbeat time
 	entity       NetworkEntity          // low-level network entity
 	data         map[string]interface{} // session data store
@@ -109,8 +108,8 @@ func (s *Session) ID() int64 {
 }
 
 // UID returns uid that bind to current session
-func (s *Session) UID() int64 {
-	return atomic.LoadInt64(&s.uid)
+func (s *Session) UID() string {
+	return s.uid
 }
 
 // LastMid returns the last message id
@@ -119,12 +118,12 @@ func (s *Session) LastMid() uint64 {
 }
 
 // Bind bind UID to current session
-func (s *Session) Bind(uid int64) error {
-	if uid < 1 {
+func (s *Session) Bind(uid string) error {
+	if uid == "" {
 		return ErrIllegalUID
 	}
 
-	atomic.StoreInt64(&s.uid, uid)
+	s.uid = uid
 	return nil
 }
 
@@ -414,6 +413,6 @@ func (s *Session) Clear() {
 	s.Lock()
 	defer s.Unlock()
 
-	s.uid = 0
+	s.uid = ""
 	s.data = map[string]interface{}{}
 }

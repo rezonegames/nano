@@ -2,6 +2,7 @@ package nano
 
 import (
 	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/lonng/nano/session"
@@ -15,7 +16,8 @@ func TestChannel_Add(t *testing.T) {
 	for i := 0; i < paraCount; i++ {
 		go func(id int) {
 			s := session.New(nil)
-			s.Bind(int64(id + 1))
+			uid := strconv.Itoa(id + 1)
+			s.Bind(uid)
 			c.Add(s)
 			w <- true
 		}(i)
@@ -29,7 +31,7 @@ func TestChannel_Add(t *testing.T) {
 		t.Fatalf("count expect: %d, got: %d", paraCount, c.Count())
 	}
 
-	n := rand.Int63n(int64(paraCount)) + 1
+	n := strconv.Itoa(rand.Intn(paraCount) + 1)
 	if !c.Contains(n) {
 		t.Fail()
 	}

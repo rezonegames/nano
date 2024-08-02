@@ -125,10 +125,10 @@ func (a *agent) Push(route string, v interface{}) error {
 	if env.Debug {
 		switch d := v.(type) {
 		case []byte:
-			log.Println(fmt.Sprintf("Type=Push, ID=%d, UID=%d, Route=%s, Data=%dbytes",
+			log.Println(fmt.Sprintf("Type=Push, ID=%d, UID=%s, Route=%s, Data=%dbytes",
 				a.session.ID(), a.session.UID(), route, len(d)))
 		default:
-			log.Println(fmt.Sprintf("Type=Push, ID=%d, UID=%d, Route=%s, Data=%+v",
+			log.Println(fmt.Sprintf("Type=Push, ID=%d, UID=%s, Route=%s, Data=%+v",
 				a.session.ID(), a.session.UID(), route, v))
 		}
 	}
@@ -180,10 +180,10 @@ func (a *agent) ResponseMid(mid uint64, v interface{}) error {
 	if env.Debug {
 		switch d := v.(type) {
 		case []byte:
-			log.Println(fmt.Sprintf("Type=Response, ID=%d, UID=%d, MID=%d, Data=%dbytes",
+			log.Println(fmt.Sprintf("Type=Response, ID=%d, UID=%s, MID=%d, Data=%dbytes",
 				a.session.ID(), a.session.UID(), mid, len(d)))
 		default:
-			log.Println(fmt.Sprintf("Type=Response, ID=%d, UID=%d, MID=%d, Data=%+v",
+			log.Println(fmt.Sprintf("Type=Response, ID=%d, UID=%s, MID=%d, Data=%+v",
 				a.session.ID(), a.session.UID(), mid, v))
 		}
 	}
@@ -201,7 +201,7 @@ func (a *agent) Close() error {
 	a.setStatus(statusClosed)
 
 	if env.Debug {
-		log.Println(fmt.Sprintf("Session closed, ID=%d, UID=%d, IP=%s",
+		log.Println(fmt.Sprintf("Session closed, ID=%d, UID=%s, IP=%s",
 			a.session.ID(), a.session.UID(), a.conn.RemoteAddr()))
 	}
 
@@ -246,7 +246,7 @@ func (a *agent) write() {
 		close(chWrite)
 		a.Close()
 		if env.Debug {
-			log.Println(fmt.Sprintf("Session write goroutine exit, SessionID=%d, UID=%d", a.session.ID(), a.session.UID()))
+			log.Println(fmt.Sprintf("Session write goroutine exit, SessionID=%d, UID=%s", a.session.ID(), a.session.UID()))
 		}
 	}()
 

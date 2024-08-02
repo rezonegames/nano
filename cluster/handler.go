@@ -238,7 +238,7 @@ func (h *LocalHandler) handle(conn net.Conn) {
 
 		agent.Close()
 		if env.Debug {
-			log.Println(fmt.Sprintf("Session read goroutine exit, SessionID=%d, UID=%d", agent.session.ID(), agent.session.UID()))
+			log.Println(fmt.Sprintf("Session read goroutine exit, SessionID=%d, UID=%s", agent.session.ID(), agent.session.UID()))
 		}
 	}()
 
@@ -460,7 +460,7 @@ func (h *LocalHandler) localProcess(handler *component.Handler, lastMid uint64, 
 	}
 
 	if env.Debug {
-		log.Println(fmt.Sprintf("UID=%d, Message={%s}, Data=%+v", session.UID(), msg.String(), data))
+		log.Println(fmt.Sprintf("UID=%s, Message={%s}, Data=%+v", session.UID(), msg.String(), data))
 	}
 
 	args := []reflect.Value{handler.Receiver, reflect.ValueOf(session), reflect.ValueOf(data)}

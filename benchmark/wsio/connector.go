@@ -77,7 +77,7 @@ func NewConnector() *Connector {
 // Start connect to the server and send/recv between the c/s
 func (c *Connector) Start(addr string, path string) error {
 	u := url.URL{Scheme: "ws", Host: addr, Path: path}
-	log.Println("connecting to %s", u.String())
+	log.Println("connecting to", u.String())
 
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
